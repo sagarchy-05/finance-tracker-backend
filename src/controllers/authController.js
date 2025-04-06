@@ -80,6 +80,30 @@ exports.verifyEmail = async (req, res) => {
     logger.info(`Email verified for userId: ${decoded.userId}`);
   } catch (error) {
     logger.warn(`Email verification failed: ${error.message}`);
-    res.status(400).json({ message: 'Invalid or expired token' });
+    res.redirect(`${CLIENT_URL}/verify-failed`);
+  }
+};
+
+//Resend Verification
+exports.resendVerificationEmail = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({ message: 'Email is already verified' });
+    }
+
+    await sendVerificationEmail(user);
+
+    res.json({ message: 'Verification email resent. Check your inbox!' });
+    logger.info(`Resent verification email to: ${email}`);
+  } catch (error) {
+    logger.error(`Resend verification error: ${error.message}`);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
