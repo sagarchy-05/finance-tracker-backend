@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { sendVerificationEmail } = require('../utils/emailService');
 const logger = require('../utils/logger');
-const { JWT_SECRET } = require('../utils/constants');
+const { JWT_SECRET, CLIENT_URL } = require('../utils/constants');
 
 // User Signup
 exports.signup = async (req, res) => {
@@ -76,7 +76,7 @@ exports.verifyEmail = async (req, res) => {
 
     await User.findByIdAndUpdate(decoded.userId, { isVerified: true });
 
-    res.json({ message: 'Email verified successfully' });
+    res.redirect(`${CLIENT_URL}/verify-success`);
     logger.info(`Email verified for userId: ${decoded.userId}`);
   } catch (error) {
     logger.warn(`Email verification failed: ${error.message}`);
