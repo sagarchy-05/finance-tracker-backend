@@ -41,7 +41,7 @@ const sendVerificationEmail = async (user) => {
       expiresIn: '1d',
     });
 
-    const verificationUrl = `${backendUrl}/api/auth/verify-email?token=${token}`;
+    const verificationUrl = `${backendUrl}/api/auth/verify-email/${token}`;
 
     const subject = 'Verify Your Email';
     const text = `Click the link below to verify your email: ${verificationUrl}`;
