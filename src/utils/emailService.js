@@ -1,6 +1,7 @@
 const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
+const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
@@ -40,7 +41,7 @@ const sendVerificationEmail = async (user) => {
       expiresIn: '1d',
     });
 
-    const verificationUrl = `http://localhost:5000/api/auth/verify-email/${token}`;
+    const verificationUrl = `${backendUrl}/api/auth/verify-email?token=${token}`;
 
     const subject = 'Verify Your Email';
     const text = `Click the link below to verify your email: ${verificationUrl}`;
