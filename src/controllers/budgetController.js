@@ -46,8 +46,9 @@ exports.getBudgets = async (req, res) => {
   try {
     const userBudget = await Budget.findOne({ userId: req.user });
 
+    // If no budget document or budgets array is empty, return empty array
     if (!userBudget || userBudget.budgets.length === 0) {
-      return res.status(404).json({ message: 'No budgets found' });
+      return res.status(200).json([]);
     }
 
     res.json(userBudget.budgets);
