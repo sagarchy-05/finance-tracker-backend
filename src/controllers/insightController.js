@@ -14,9 +14,10 @@ const generateInsight = async (req, res) => {
     const transactions = await Transaction.find({ userId });
 
     if (transactions.length === 0) {
-      return res
-        .status(400)
-        .json({ message: 'No transactions found for this user.' });
+      return res.status(200).json({
+        message: 'No transactions present to generate insights on.',
+        insights: [],
+      });
     }
 
     const transactionText = transactions

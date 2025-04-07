@@ -24,6 +24,12 @@ const getCategoryTotals = async (req, res) => {
       },
     ]);
 
+    if (!totals.length) {
+      return res
+        .status(200)
+        .json({ data: [], message: 'No category data available yet.' });
+    }
+
     res.status(200).json({ data: totals });
   } catch (err) {
     console.error('Error in getCategoryTotals:', err);
@@ -71,6 +77,12 @@ const getMonthlyTrends = async (req, res) => {
       { $sort: { month: 1 } },
     ]);
 
+    if (!trends.length) {
+      return res
+        .status(200)
+        .json({ data: [], message: 'No monthly trends available yet.' });
+    }
+
     res.status(200).json({ data: trends });
   } catch (err) {
     console.error('Error in getMonthlyTrends:', err);
@@ -87,7 +99,7 @@ const getBudgetVsActual = async (req, res) => {
     const userBudgetDoc = await Budget.findOne({ userId });
 
     if (!userBudgetDoc || !userBudgetDoc.budgets.length) {
-      return res.status(200).json({ data: [] });
+      return res.status(200).json({ data: [], message: 'No budgets set yet.' });
     }
 
     const results = await Promise.all(
@@ -157,6 +169,12 @@ const getDailyExpenseSummary = async (req, res) => {
       },
       { $sort: { date: 1 } },
     ]);
+
+    if (!summary.length) {
+      return res
+        .status(200)
+        .json({ data: [], message: 'No daily expense data available yet.' });
+    }
 
     res.status(200).json({ data: summary });
   } catch (err) {
