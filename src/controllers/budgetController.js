@@ -14,21 +14,27 @@ exports.setBudgets = async (req, res) => {
     let userBudget = await Budget.findOne({ userId: req.user });
 
     if (!userBudget) {
+      // First-time setup
       userBudget = new Budget({
         userId: req.user,
         budgets: budgets.map((b) => ({ ...b, spent: 0 })),
       });
     } else {
-      budgets.forEach((budget) => {
+      for (const budget of budgets) {
         const existingBudget = userBudget.budgets.find(
           (b) => b.category === budget.category
         );
         if (existingBudget) {
+          if (budget.limit < existingBudget.spent) {
+            return res.status(400).json({
+              message: `Cannot set limit lower than spent amount for category: ${budget.category}`,
+            });
+          }
           existingBudget.limit = budget.limit;
         } else {
           userBudget.budgets.push({ ...budget, spent: 0 });
         }
-      });
+      }
     }
 
     await userBudget.save();

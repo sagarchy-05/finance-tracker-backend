@@ -6,12 +6,17 @@ const transactionSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true,
+      index: true,
     },
-    amount: { type: Number, required: true },
-    category: { type: String, required: true },
-    type: { type: String, enum: ['income', 'expense'], required: true }, // Income or Expense
+    amount: { type: Number, required: true, min: 0 },
+    category: { type: String, required: true, trim: true },
+    type: {
+      type: String,
+      enum: ['income', 'expense'],
+      required: true,
+    },
     date: { type: Date, default: Date.now },
-    description: { type: String, default: '' },
+    description: { type: String, default: '', trim: true },
   },
   { timestamps: true }
 );

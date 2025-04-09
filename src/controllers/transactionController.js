@@ -12,7 +12,6 @@ exports.createTransaction = async (req, res) => {
         .json({ message: 'Amount, type, and category are required' });
     }
 
-    // Find user's budget
     const userBudget = await Budget.findOne({ userId: req.user });
     if (!userBudget) {
       return res
@@ -34,8 +33,8 @@ exports.createTransaction = async (req, res) => {
         });
       }
       budget.spent += amount;
-    } else if (type === 'income') {
-      budget.spent -= amount; // Reduce spent for income
+    } else {
+      budget.spent = Math.max(0, budget.spent - amount);
     }
 
     const transaction = new Transaction({
@@ -85,35 +84,38 @@ exports.updateTransaction = async (req, res) => {
     }
 
     const userBudget = await Budget.findOne({ userId: req.user });
-
     if (!userBudget) {
       return res.status(404).json({ message: 'Budget not found' });
     }
 
-    let budgetCategory = userBudget.budgets.find(
-      (b) => b.category === category
+    const prevBudget = userBudget.budgets.find(
+      (b) => b.category === transaction.category
     );
+    const newBudget = userBudget.budgets.find((b) => b.category === category);
 
-    if (!budgetCategory) {
+    if (!newBudget) {
       return res.status(400).json({ message: `No budget set for ${category}` });
     }
 
+    // Reverse old budget impact
+    if (prevBudget) {
+      if (transaction.type === 'expense') {
+        prevBudget.spent = Math.max(0, prevBudget.spent - transaction.amount);
+      } else {
+        prevBudget.spent += transaction.amount;
+      }
+    }
+
+    // Check new budget limit before applying
     if (type === 'expense') {
-      const totalSpent = await Transaction.aggregate([
-        { $match: { userId: req.user, category, type: 'expense' } },
-        { $group: { _id: null, total: { $sum: '$amount' } } },
-      ]);
-
-      const currentSpent = totalSpent.length ? totalSpent[0].total : 0;
-      const newSpentAmount = currentSpent - transaction.amount + amount;
-
-      if (newSpentAmount > budgetCategory.limit) {
+      if (newBudget.spent + amount > newBudget.limit) {
         return res.status(400).json({
           message: `Updated transaction exceeds budget for ${category}!`,
         });
       }
-
-      budgetCategory.spent = newSpentAmount;
+      newBudget.spent += amount;
+    } else {
+      newBudget.spent = Math.max(0, newBudget.spent - amount);
     }
 
     // Update transaction
@@ -147,18 +149,24 @@ exports.deleteTransaction = async (req, res) => {
     }
 
     const userBudget = await Budget.findOne({ userId: req.user });
-
     if (!userBudget) {
       return res.status(404).json({ message: 'Budget not found' });
     }
 
-    let budgetCategory = userBudget.budgets.find(
+    const budgetCategory = userBudget.budgets.find(
       (b) => b.category === transaction.category
     );
 
-    if (budgetCategory && transaction.type === 'expense') {
-      budgetCategory.spent -= transaction.amount;
-      if (budgetCategory.spent < 0) budgetCategory.spent = 0;
+    if (budgetCategory) {
+      if (transaction.type === 'expense') {
+        budgetCategory.spent = Math.max(
+          0,
+          budgetCategory.spent - transaction.amount
+        );
+      } else if (transaction.type === 'income') {
+        budgetCategory.spent += transaction.amount;
+      }
+
       await userBudget.save();
     }
 
