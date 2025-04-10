@@ -91,6 +91,12 @@ exports.deleteBudget = async (req, res) => {
       });
     }
 
+    if (category === 'Others') {
+      return res
+        .status(400)
+        .json({ message: "Default category 'Others' cannot be deleted." });
+    }
+
     // Filter out the budget that needs to be deleted
     userBudget.budgets = userBudget.budgets.filter(
       (b) => b.category !== category

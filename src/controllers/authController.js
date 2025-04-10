@@ -19,6 +19,19 @@ exports.signup = async (req, res) => {
     user = new User({ name, email, password: hashedPassword });
     await user.save();
 
+    const Budget = require('../models/Budget');
+    const defaultBudget = new Budget({
+      userId: user._id,
+      budgets: [
+        {
+          category: 'Others',
+          limit: 0,
+          spent: 0,
+        },
+      ],
+    });
+    await defaultBudget.save();
+
     await sendVerificationEmail(user);
 
     res.status(201).json({
