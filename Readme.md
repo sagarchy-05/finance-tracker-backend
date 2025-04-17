@@ -6,7 +6,7 @@ A full-stack web application that helps users manage their income and expenses, 
 
 ## 🌐 Live Demo
 
-🚀 Hosted Link: https://track-your-finance-yourself.vercel.app/
+🚀 Hosted Link: https://track-your-own-finances.vercel.app/
 
 ---
 
