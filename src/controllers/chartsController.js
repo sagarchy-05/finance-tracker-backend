@@ -107,7 +107,7 @@ const getBudgetVsActual = async (req, res) => {
         const spent = await Transaction.aggregate([
           {
             $match: {
-              userId: mongoose.Types.ObjectId(userId),
+              userId: new mongoose.Types.ObjectId(userId),
               category: b.category,
             },
           },
