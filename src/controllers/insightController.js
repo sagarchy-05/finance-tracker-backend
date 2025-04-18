@@ -48,7 +48,10 @@ ${transactionText}
           Authorization: `Bearer ${HUGGINGFACE_API_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ inputs: prompt }),
+        body: JSON.stringify({
+          inputs: prompt,
+          options: { wait_for_model: true },
+        }),
       }
     );
 
