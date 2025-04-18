@@ -69,11 +69,24 @@ exports.login = async (req, res) => {
         .json({ message: 'Please verify your email first' });
     }
 
-    const token = jwt.sign({ userId: user._id }, JWT_SECRET, {
-      expiresIn: '7d',
-    });
+    const token = jwt.sign(
+      {
+        userId: user._id,
+        name: user.name,
+        email: user.email,
+      },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
 
-    res.json({ message: 'Login successful', token });
+    res.json({
+      message: 'Login successful',
+      token,
+      user: {
+        name: user.name,
+        email: user.email,
+      },
+    });
     logger.info(`User logged in: ${email}`);
   } catch (error) {
     logger.error(`Login error: ${error.message}`);
