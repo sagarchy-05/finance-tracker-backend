@@ -2,18 +2,75 @@ require('dotenv').config();
 const Insight = require('../models/Insight');
 const Transaction = require('../models/Transaction');
 
-const HUGGINGFACE_API_KEY = process.env.HUGGINGFACE_API_KEY;
-const HF_MODEL = process.env.HF_MODEL || 'tiiuae/falcon-7b-instruct';
+const HF_TOKEN = process.env.HF_TOKEN;
+const HF_MODEL = process.env.HF_MODEL;
+
+// Helper: call Hugging Face router
+const callHuggingFaceLLM = async (prompt) => {
+  if (!HF_TOKEN) {
+    throw new Error('HF_TOKEN is not set in environment');
+  }
+
+  const fetch = (...args) =>
+    import('node-fetch').then(({ default: fetch }) => fetch(...args));
+
+  const response = await fetch('https://router.huggingface.co/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${HF_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: HF_MODEL,
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 300,
+      temperature: 0.7,
+    }),
+  });
+
+  const textBody = await response.text();
+  let data;
+  try {
+    data = JSON.parse(textBody);
+  } catch (e) {
+    console.error('HF non-JSON body:', textBody);
+    throw new Error(
+      `HF router returned non-JSON (status ${response.status}): ${textBody.slice(
+        0,
+        200
+      )}...`
+    );
+  }
+
+  if (!response.ok) {
+    console.error('HF error response:', data);
+    throw new Error(data.error?.message || `Hugging Face API error (status ${response.status})`);
+  }
+
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) {
+    console.error('Unexpected HF response shape:', data);
+    throw new Error(
+      'Hugging Face returned no content: ' +
+        JSON.stringify(data).slice(0, 200) +
+        '...'
+    );
+  }
+
+  return content;
+};
 
 const generateInsight = async (req, res) => {
   try {
-    const fetch = (...args) =>
-      import('node-fetch').then(({ default: fetch }) => fetch(...args));
-
     const userId = req.user?._id || req.user;
+
+    if (!userId) {
+      throw new Error('req.user is not set. Check your auth middleware.');
+    }
+
     const transactions = await Transaction.find({ userId });
 
-    if (transactions.length === 0) {
+    if (!transactions || transactions.length === 0) {
       return res.status(200).json({
         message: 'No transactions present to generate insights on.',
         insights: [],
@@ -40,37 +97,16 @@ Transactions:
 ${transactionText}
 `;
 
-    const response = await fetch(
-      `https://api-inference.huggingface.co/models/${HF_MODEL}`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${HUGGINGFACE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          inputs: prompt,
-          options: { wait_for_model: true },
-        }),
-      }
-    );
+    const rawText = await callHuggingFaceLLM(prompt);
 
-    const result = await response.json();
-
-    if (!response.ok || !Array.isArray(result) || !result[0]?.generated_text) {
-      throw new Error(result?.error || 'Invalid AI response format');
-    }
-
-    const rawText = result[0]?.generated_text || '';
     const aiInsight = rawText
       .split('\n')
-      .map((line) => line.replace(/^[-*]\s*-?\s*/, '- ').trim()) // Clean up bullets
-      .filter((line) => line && line.startsWith('-')) // Only keep lines that are actual insights
+      .map((line) => line.replace(/^[-*]\s*-?\s*/, '- ').trim()) // normalize bullets
+      .filter((line) => line && line.startsWith('-')) // only bullet lines
       .slice(0, 5)
       .join('\n')
       .trim();
 
-    // fallback if AI response is invalid or just echoed the prompt
     const isValidInsight =
       aiInsight &&
       !aiInsight.includes('Transactions:') &&
@@ -81,10 +117,10 @@ ${transactionText}
       content: isValidInsight ? aiInsight : 'No insight generated',
     });
 
-    res.status(200).json({ insight: savedInsight });
+    return res.status(200).json({ insight: savedInsight });
   } catch (error) {
     console.error('Error generating insight:', error);
-    res
+    return res
       .status(500)
       .json({ message: 'Failed to generate insight', error: error.message });
   }
@@ -94,10 +130,10 @@ const getInsights = async (req, res) => {
   try {
     const userId = req.user?._id || req.user;
     const insights = await Insight.find({ userId }).sort({ createdAt: -1 });
-    res.status(200).json({ insights });
+    return res.status(200).json({ insights });
   } catch (error) {
     console.error('Error fetching insights:', error);
-    res
+    return res
       .status(500)
       .json({ message: 'Failed to fetch insights', error: error.message });
   }
