@@ -2,7 +2,7 @@ const rateLimit = require('express-rate-limit');
 
 const limiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3,
+  max: 1,
   handler: (req, res) => {
     const now = new Date();
     const resetTime =
