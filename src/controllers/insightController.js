@@ -2,26 +2,27 @@ require('dotenv').config();
 const Insight = require('../models/Insight');
 const Transaction = require('../models/Transaction');
 
-const HF_TOKEN = process.env.HF_TOKEN;
-const HF_MODEL = process.env.HF_MODEL;
+const XAI_API_KEY = process.env.XAI_API_KEY;
+const XAI_MODEL = process.env.XAI_MODEL;
+const XAI_URL = process.env.XAI_URL;
 
-// Helper: call Hugging Face router
-const callHuggingFaceLLM = async (prompt) => {
-  if (!HF_TOKEN) {
-    throw new Error('HF_TOKEN is not set in environment');
+// Helper: call xAI Grok
+const callGrokLLM = async (prompt) => {
+  if (!XAI_API_KEY) {
+    throw new Error('XAI_API_KEY is not set in environment');
   }
 
   const fetch = (...args) =>
     import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
-  const response = await fetch('https://router.huggingface.co/v1/chat/completions', {
+  const response = await fetch('XAI_URL', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${HF_TOKEN}`,
+      Authorization: `Bearer ${XAI_API_KEY}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: HF_MODEL,
+      model: XAI_MODEL,
       messages: [{ role: 'user', content: prompt }],
       max_tokens: 300,
       temperature: 0.7,
@@ -33,27 +34,22 @@ const callHuggingFaceLLM = async (prompt) => {
   try {
     data = JSON.parse(textBody);
   } catch (e) {
-    console.error('HF non-JSON body:', textBody);
+    console.error('xAI non-JSON body:', textBody);
     throw new Error(
-      `HF router returned non-JSON (status ${response.status}): ${textBody.slice(
-        0,
-        200
-      )}...`
+      `xAI returned non-JSON (status ${response.status}): ${textBody.slice(0, 200)}...`
     );
   }
 
   if (!response.ok) {
-    console.error('HF error response:', data);
-    throw new Error(data.error?.message || `Hugging Face API error (status ${response.status})`);
+    console.error('xAI error response:', data);
+    throw new Error(data.error?.message || `xAI API error (status ${response.status})`);
   }
 
   const content = data.choices?.[0]?.message?.content;
   if (!content) {
-    console.error('Unexpected HF response shape:', data);
+    console.error('Unexpected xAI response shape:', data);
     throw new Error(
-      'Hugging Face returned no content: ' +
-        JSON.stringify(data).slice(0, 200) +
-        '...'
+      'xAI returned no content: ' + JSON.stringify(data).slice(0, 200) + '...'
     );
   }
 
@@ -97,12 +93,12 @@ Transactions:
 ${transactionText}
 `;
 
-    const rawText = await callHuggingFaceLLM(prompt);
+    const rawText = await callGrokLLM(prompt);
 
     const aiInsight = rawText
       .split('\n')
-      .map((line) => line.replace(/^[-*]\s*-?\s*/, '- ').trim()) // normalize bullets
-      .filter((line) => line && line.startsWith('-')) // only bullet lines
+      .map((line) => line.replace(/^[-*]\s*-?\s*/, '- ').trim())
+      .filter((line) => line && line.startsWith('-'))
       .slice(0, 5)
       .join('\n')
       .trim();
