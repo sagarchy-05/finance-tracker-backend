@@ -1,20 +1,20 @@
 require('dotenv').config();
-const { createXai } = require('@ai-sdk/xai');
+const { createGoogleGenerativeAI } = require('@ai-sdk/google');
 const { generateText } = require('ai');
 const Insight = require('../models/Insight');
 const Transaction = require('../models/Transaction');
 
-const xai = createXai({ apiKey: process.env.XAI_API_KEY });
-const xaiModel = process.env.XAI_MODEL;
+const google = createGoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
+const model = process.env.GEMINI_MODEL;
 
-// Helper: call xAI Grok via AI SDK
-const callGrokLLM = async (prompt) => {
-  if (!process.env.XAI_API_KEY) {
-    throw new Error('XAI_API_KEY is not set in environment');
+// Helper: call Gemini Flash via AI SDK
+const callGeminiLLM = async (prompt) => {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error('GEMINI_API_KEY is not set in environment');
   }
 
   const { text } = await generateText({
-    model: xai(xaiModel),
+    model: google(model),
     system: 'You are a smart and concise personal finance assistant.',
     prompt,
     maxTokens: 300,
@@ -22,7 +22,7 @@ const callGrokLLM = async (prompt) => {
   });
 
   if (!text) {
-    throw new Error('xAI returned no content');
+    throw new Error('Gemini returned no content');
   }
 
   return text;
@@ -63,7 +63,7 @@ Transactions:
 ${transactionText}
 `;
 
-    const rawText = await callGrokLLM(prompt);
+    const rawText = await callGeminiLLM(prompt);
 
     const aiInsight = rawText
       .split('\n')

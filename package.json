@@ -11,7 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@ai-sdk/xai": "^3.0.74",
+    "@ai-sdk/google": "^3.0.53",
     "ai": "^6.0.141",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
@@ -22,9 +22,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.13.1",
     "morgan": "^1.10.0",
-    "node-fetch": "^3.3.2",
     "nodemailer": "^8.0.4",
-    "openai": "^4.91.1",
     "winston": "^3.17.0"
   },
   "devDependencies": {
