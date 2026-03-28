@@ -1,59 +1,31 @@
 require('dotenv').config();
+const { createXai } = require('@ai-sdk/xai');
+const { generateText } = require('ai');
 const Insight = require('../models/Insight');
 const Transaction = require('../models/Transaction');
 
-const XAI_API_KEY = process.env.XAI_API_KEY;
-const XAI_MODEL = process.env.XAI_MODEL;
-const XAI_URL = process.env.XAI_URL;
+const xai = createXai({ apiKey: process.env.XAI_API_KEY });
+const xaiModel = process.env.XAI_MODEL;
 
-// Helper: call xAI Grok
+// Helper: call xAI Grok via AI SDK
 const callGrokLLM = async (prompt) => {
-  if (!XAI_API_KEY) {
+  if (!process.env.XAI_API_KEY) {
     throw new Error('XAI_API_KEY is not set in environment');
   }
 
-  const fetch = (...args) =>
-    import('node-fetch').then(({ default: fetch }) => fetch(...args));
-
-  const response = await fetch('XAI_URL', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${XAI_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: XAI_MODEL,
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 300,
-      temperature: 0.7,
-    }),
+  const { text } = await generateText({
+    model: xai(xaiModel),
+    system: 'You are a smart and concise personal finance assistant.',
+    prompt,
+    maxTokens: 300,
+    temperature: 0.7,
   });
 
-  const textBody = await response.text();
-  let data;
-  try {
-    data = JSON.parse(textBody);
-  } catch (e) {
-    console.error('xAI non-JSON body:', textBody);
-    throw new Error(
-      `xAI returned non-JSON (status ${response.status}): ${textBody.slice(0, 200)}...`
-    );
+  if (!text) {
+    throw new Error('xAI returned no content');
   }
 
-  if (!response.ok) {
-    console.error('xAI error response:', data);
-    throw new Error(data.error?.message || `xAI API error (status ${response.status})`);
-  }
-
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) {
-    console.error('Unexpected xAI response shape:', data);
-    throw new Error(
-      'xAI returned no content: ' + JSON.stringify(data).slice(0, 200) + '...'
-    );
-  }
-
-  return content;
+  return text;
 };
 
 const generateInsight = async (req, res) => {
@@ -83,8 +55,6 @@ const generateInsight = async (req, res) => {
       .join(', ');
 
     const prompt = `
-You are a smart and concise personal finance assistant.
-
 Given the following list of recent financial transactions, generate exactly 3 to 5 personalized insights that will help the user save money, spot spending patterns, or improve financial habits.
 
 Respond ONLY with bullet points that start with a dash (-). Do NOT mention or repeat the transactions. Avoid generic tips. Each bullet must be concise and actionable.
